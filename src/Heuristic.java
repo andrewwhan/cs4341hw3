@@ -10,7 +10,6 @@ public class Heuristic
 	static int centralMultiplier = 9;
 	static int heightMultiplier = 1;
 	static int bottomMultiplier = 3;
-	static int popoutMultiplier = 5;
 	
 	public boolean terminalTest(Board boardstate){
 		board = boardstate;
@@ -19,56 +18,30 @@ public class Heuristic
 	}
 	
 	// Performs a slow, but in-depth, heuristic lookup
-	public int getValue( Board boardstate)
+	public int[] getValue( Board boardstate)
 	{
 		board = boardstate;
 		value = 0;
 		winningSpaceBoard = new int[board.boardstate.length][board.boardstate[0].length];
+		int[] features = new int[5];
 		// gets the current board states then uses the helper methods to return a value of a move
 //		 System.out.println("value at start:" + value);
-		checkAdjacent();
+		features[0] = checkAdjacent();
 //		 System.out.println("value after checkAdjacent:" + value);
-		countWinningSpaces();
-		central();
+		features[1] = countWinningSpaces();
+		features[2] = central();
 //		 System.out.println("value after central:" + value);
-		bottom();
-		popout();
+		features[3] = bottom();
 		win();
 		loss();
+		features[4] = value;
 //		System.err.println(value);
-		return value;
+		return features;
 	}
 	
-	// Performs a fast, but simple, heuristic function
-	public int getValueFast( Board boardstate)
+	private int checkAdjacent()
 	{
-		board = boardstate;
-		value = 0;
-		winningSpaceBoard = new int[board.boardstate.length][board.boardstate[0].length];
-		checkAdjacent();
-		win();
-		loss();
-		//System.err.println(value);
-		return value;
-	}
-	
-	// Performs a medium complexity heuristic function
-	public int getValueNormal( Board boardstate)
-	{
-		board = boardstate;
-		value = 0;
-		winningSpaceBoard = new int[board.boardstate.length][board.boardstate[0].length];
-		checkAdjacent();
-		central();
-		bottom();
-		win();
-		loss();
-		//System.err.println(value);
-		return value;
-	}
-	
-	private void checkAdjacent()
-	{
+		int adjacency = 0;
 		for(int i = 0; i < board.boardstate.length; i++)
 		{
 			for(int j = 0; j <board.boardstate[i].length; j++)
@@ -78,30 +51,37 @@ public class Heuristic
 					//Add or subtract to value based on whether it's their chain or our chain
 					int usOrThem = (board.boardstate[i][j] == 1 ? 1 : -1);
 					value += adjacencyMultiplier*chain*usOrThem;
+					adjacency += chain*usOrThem;
 				}			
 			}
 		}
+		return adjacency;
 	}
 	
-	private void countWinningSpaces(){
+	private int countWinningSpaces(){
+		int spaces = 0;
 		for(int i=0; i<winningSpaceBoard.length; i++){
 			for(int j=0; j<winningSpaceBoard[i].length; j++){
 				if(winningSpaceBoard[i][j] == 1){
 					value += 5*winningSpaceMultiplier;
 					//System.err.println("Our winning space");
+					spaces++;
 				}
 				else if(winningSpaceBoard[i][j] == 2){
 					value -= 5*winningSpaceMultiplier;
 					//System.err.println("Their winning space");
+					spaces--;
 				}
 			}
 		}
+		return spaces;
 	}
 	
 	// Adds value to moves that are placed in a central location
-	private void central()
+	private int central()
 	{
 		int center = board.boardstate[0].length/2;
+		int central = 0;
 		for(int i = 0; i < board.boardstate.length; i++)
 		{
 			for(int j=0; j < board.boardstate[i].length; j++)
@@ -110,34 +90,31 @@ public class Heuristic
 					int usOrThem = (board.boardstate[i][j] == 1 ? 1 : -1);
 					value += usOrThem*centralMultiplier*(center - Math.abs(j-center));
 					value += usOrThem*(heightMultiplier/2)*(board.boardstate.length - i);
+					central += usOrThem*(center - Math.abs(j-center));
 				}
 			}
 		}
+		return central;
 	}
 	
 	// Adds value to moves that put our pieces on the bottom row, as they can be popped out if needed
-	private void bottom()
+	private int bottom()
 	{
+		int bottom = 0;
 		for(int i=0; i<board.boardstate[0].length; i++)
 		{
 			if(board.boardstate[0][i] == 1)
 			{
 				value += bottomMultiplier;
+				bottom++;
 			}
 			if(board.boardstate[0][i] == 2)
 			{
 				value -= bottomMultiplier;
+				bottom--;
 			}
 		}
-	}
-	
-	private void popout(){
-		if(board.ourPopout){
-			value += 10 * popoutMultiplier;
-		}
-		if(board.theirPopout){
-			value -= 10 * popoutMultiplier;
-		}
+		return bottom;
 	}
 	
 	private boolean win()
